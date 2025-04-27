@@ -1,0 +1,14 @@
+name: OreBreaker
+version: '1.0-SNAPSHOT'
+main: org.DBsGameplay.oreBreaker.Main
+api-version: '1.21'
+commands:
+  umtausch:
+    description: Tausche Materialien
+  setspawn:
+  showhud:
+    description: Zeigt ein benutzerdefiniertes HUD an
+    usage: /showhud [text]
+  hidehud:
+    description: Entfernt das benutzerdefinierte HUD
+    usage: /hidehud

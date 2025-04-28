@@ -1,6 +1,7 @@
 package org.DBsGameplay.oreBreaker;
 
 import org.DBsGameplay.oreBreaker.command.ExchangeCommand;
+import org.DBsGameplay.oreBreaker.command.SetScoreboardCommand;
 import org.DBsGameplay.oreBreaker.command.SetSpawnCommand;
 import org.DBsGameplay.oreBreaker.listeners.Events;
 import org.DBsGameplay.oreBreaker.listeners.MapEvents;
@@ -25,6 +26,9 @@ public final class Main extends JavaPlugin {
         getCommand("setspawn").setExecutor(new SetSpawnCommand());
 
         getCommand("umtausch").setTabCompleter(new ExchangeCommand());
+        getCommand("setScoreboard").setExecutor(new SetScoreboardCommand());
+
+        new SetScoreboardCommand().loadLeaderboards();
 
         new BukkitRunnable() {
             @Override

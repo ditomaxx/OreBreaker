@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/OreBreaker.iml" filepath="$PROJECT_DIR$/OreBreaker.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/OreBreaker.iml" filepath="$PROJECT_DIR$/.idea/OreBreaker.iml" />
     </modules>
   </component>
 </project>

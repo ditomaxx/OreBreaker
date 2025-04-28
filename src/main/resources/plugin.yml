@@ -12,3 +12,6 @@ commands:
   hidehud:
     description: Entfernt das benutzerdefinierte HUD
     usage: /hidehud
+  setScoreboard:
+    description: Setzt das Scoreboard
+    usage: /setScoreboard [blocks/prestige]

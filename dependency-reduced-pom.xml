@@ -54,13 +54,6 @@
       <version>1.21-R0.1-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>
-    <dependency>
-      <groupId>io.papermc.paper</groupId>
-      <artifactId>paper</artifactId>
-      <version>1.21.1</version>
-      <scope>system</scope>
-      <systemPath>${project.basedir}/lib/paper-1.21.1.jar</systemPath>
-    </dependency>
   </dependencies>
   <properties>
     <java.version>21</java.version>

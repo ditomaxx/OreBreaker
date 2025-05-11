@@ -109,42 +109,53 @@ public class Events implements Listener {
     private void handleOreBreak(BlockBreakEvent event) {
         event.setDropItems(false);
         Player player = event.getPlayer();
-        int brokenBlocks = breakSurroundingBlocks(event.getBlock(), player);
-        updatePlayerStats(player, event.getBlock(), brokenBlocks);
-    }
 
+        // Prüfe zuerst auf Jackhammer
+        handleJackhammer(event);
+
+        // Wenn kein Jackhammer, normales Abbauen
+        if (event.getBlock().getType() != Material.AIR) {
+            int brokenBlocks = breakSurroundingBlocks(event.getBlock(), player);
+            updatePlayerStats(player, event.getBlock(), brokenBlocks);
+        }
+    }
     private int breakSurroundingBlocks(Block centerBlock, Player player) {
         int abbauAnzahl = pickaxeStats.getBlockabbau(player);
-        int brokenBlocks = 1;
-        Random random = new Random();
+        int brokenBlocks = 1; // Zählt den zentralen Block mit
         Location centerLocation = centerBlock.getLocation();
 
-        for (int i = 0; i < abbauAnzahl; i++) {
-            Location offsetLocation = centerLocation.clone().add(
-                    random.nextInt(3) - 1,
-                    random.nextInt(3) - 1,
-                    random.nextInt(3) - 1
-            );
+        // Liste aller möglichen Blöcke im 3x3x3 Würfel
+        List<Block> validBlocks = new ArrayList<>();
 
-            if (breakBlockIfValid(offsetLocation.getBlock(), centerBlock)) {
-                brokenBlocks++;
+        // Sammle alle gültigen Blöcke im Umkreis
+        for (int x = -1; x <= 1; x++) {
+            for (int y = -1; y <= 1; y++) {
+                for (int z = -1; z <= 1; z++) {
+                    Block block = centerLocation.clone().add(x, y, z).getBlock();
+                    if (isValidBlockToBreak(block, centerBlock)) {
+                        validBlocks.add(block);
+                    }
+                }
             }
+        }
+
+        // Mische die Liste für zufällige Auswahl
+        Collections.shuffle(validBlocks);
+
+        // Brich genau so viele Blöcke wie durch blockabbau definiert
+        for (Block block : validBlocks) {
+            if (brokenBlocks >= abbauAnzahl) break;
+            block.breakNaturally();
+            brokenBlocks++;
         }
 
         return brokenBlocks;
     }
 
-    private boolean breakBlockIfValid(Block block, Block centerBlock) {
-        if (block.equals(centerBlock) || block.getType() == Material.AIR) {
-            return false;
-        }
-
-        if (Arrays.asList(materialList).contains(block.getType())) {
-            block.breakNaturally();
-            return true;
-        }
-
-        return false;
+    private boolean isValidBlockToBreak(Block block, Block centerBlock) {
+        return !block.equals(centerBlock) &&
+                block.getType() != Material.AIR &&
+                Arrays.asList(materialList).contains(block.getType());
     }
 
     private void updatePlayerStats(Player player, Block block, int brokenBlocks) {
@@ -155,33 +166,29 @@ public class Events implements Listener {
     private void updatePlayerBalance(Player player, Block block, int brokenBlocks) {
         String materialKey = block.getType().name().replace("_ORE", "");
         int multiplicator = pickaxeStats.getAbbaurate(player) + brokenBlocks;
-        int stage = (int) Math.floor(pickaxeStats.getPrestigeLevel(player) / MATERIALS_PER_STAGE);
+        int currentStage = (int) Math.floor(pickaxeStats.getPrestigeLevel(player) / MATERIALS_PER_STAGE);
 
-        // Normales Material hinzufügen
-        addMaterialToBalance(player, materialKey, "", multiplicator);
+        // Normales Material hinzufügen (Level_0)
+        addMaterialToBalance(player, materialKey, "_LEVEL_0", multiplicator);
 
         // 15% Chance auf höherstufiges Material
-        if (Math.random() < 0.15) { // 15% Chance
-            int materialIndex = calculateMaterialIndex(player);
-            int currentMaterialIndex = getMaterialIndex(block.getType());
+        if (Math.random() < 0.05) { // 15% Chance
+            // Maximal bis Stage 15 (von 0-15 = 16 Stufen)
+            if (currentStage < 15) {
+                // Zufällige Stufe zwischen 1 und der aktuellen maximalen Stufe
+                int maxAvailableStage = currentStage + 1;
+                int randomStage = (int) (Math.random() * maxAvailableStage) + 1;
 
-            // Überprüfe ob es ein höherwertiges Material gibt und ob es freigeschaltet ist
-            if (currentMaterialIndex < materialIndex - 1 && currentMaterialIndex < materialList.length - 1) {
-                // Nächstes Material in der Liste
-                Material nextMaterial = materialList[currentMaterialIndex + 1];
-                String nextMaterialKey = nextMaterial.name().replace("_ORE", "");
-
-                // Füge höherwertiges Material hinzu
-                addMaterialToBalance(player, nextMaterialKey, "_LEVEL_" + stage, 1);
-                player.sendMessage("§a✦ Bonus: §e+1 " + nextMaterialKey);
+                // Füge höherwertiges Material der zufälligen Stufe hinzu
+                addMaterialToBalance(player, materialKey, "_LEVEL_" + randomStage, 1);
+                player.sendMessage("§a✦ Bonus: §e+1 " + materialKey + "_LEVEL_" + randomStage);
             }
         }
     }
 
     private void addMaterialToBalance(Player player, String materialKey, String suffix, int amount) {
         String balancePath = "balance." + player.getUniqueId() + "." + materialKey + suffix;
-        Main.getInstance().getConfig().set(balancePath,
-                Main.getInstance().getConfig().getInt(balancePath, 0) + amount);
+        Main.getInstance().getConfig().set(balancePath, Main.getInstance().getConfig().getInt(balancePath, 0) + amount);
         Main.getInstance().saveConfig();
     }
 
@@ -220,16 +227,21 @@ public class Events implements Listener {
         pickaxeStats.setLevel(player, pickaxeStats.getLevel(player) + 1);
         int currentLevel = pickaxeStats.getLevel(player);
 
-        if (isEven(currentLevel)) {
-            pickaxeStats.setAbbaurate(player, pickaxeStats.getAbbaurate(player) + 1);
-        }
-        if (String.valueOf(currentLevel).endsWith("5") && pickaxeStats.getEfficiency(player) != 150) {
+        // Abbaurate bei jedem Level erhöhen
+        pickaxeStats.setAbbaurate(player, pickaxeStats.getAbbaurate(player) + 1);
+
+        // Effizienz alle 2 Level erhöhen
+        if (currentLevel % 2 == 0 && pickaxeStats.getEfficiency(player) != 150) {
             pickaxeStats.setEfficiency(player, pickaxeStats.getEfficiency(player) + 1);
         }
+
+        // Speed alle 10 Level erhöhen
         if (String.valueOf(currentLevel).endsWith("0") && pickaxeStats.getSpeed(player) != 5) {
             pickaxeStats.setSpeed(player, pickaxeStats.getSpeed(player) + 1);
         }
-        if (pickaxeStats.getPrestigeLevel(player) % 4 == 0 && pickaxeStats.getBlockabbau(player) != 50) {
+
+        // Blockabbau bei jedem 4. Prestige erhöhen
+        if (pickaxeStats.getPrestigeLevel(player) % 4 == 0 && pickaxeStats.getBlockabbau(player) != 50 && pickaxeStats.getLevel(player) == 1) {
             pickaxeStats.setBlockabbau(player, pickaxeStats.getBlockabbau(player) + 1);
         }
 
@@ -285,8 +297,8 @@ public class Events implements Listener {
         lore.add("§5§nEntchantments-Stat:");
         lore.add("§e- Abbaurate: §b" + pickaxeStats.getAbbaurate(player) + " §apro Block");
         lore.add("§d- Blockabbau §b" + pickaxeStats.getBlockabbau(player) + "/50 §aim Radius");
-        lore.add("§4- Blockabbau Effizienz: §b" + pickaxeStats.getSpeed(player));
-        lore.add("§9- Geschwindigkeits Level: §b" + pickaxeStats.getSpeed(player));
+        lore.add("§4- Blockabbau Effizienz: §b" + pickaxeStats.getSpeed(player) + "/150");
+        lore.add("§9- Geschwindigkeits Level: §b" + pickaxeStats.getSpeed(player) + "/5");
         lore.add("§a- Jackhammer eine Reihe auslöse");
         lore.add("§aChance §b0.01% §avon §b35% Maximal");
 
@@ -297,7 +309,7 @@ public class Events implements Listener {
         ItemStack itemStack = new ItemStack(material);
         ItemMeta meta = itemStack.getItemMeta();
 
-        meta.setDisplayName(name + ": §b" + Main.getInstance().getConfig().getInt("balance." + player.getUniqueId() + "." + name));
+        meta.setDisplayName(name + ": §b" + Main.getInstance().getConfig().getInt("balance." + player.getUniqueId() + "." + name.toUpperCase() + "_LEVEL_0"));
         List<String> lore = new ArrayList<>();
 
         for (int i = 1; i < 16; i++) {
@@ -441,41 +453,28 @@ public class Events implements Listener {
     }
 
     private void addUpgradeInfo(Player player, List<String> lore) {
-        // Add abbaurate upgrade info
-        if (isEven(pickaxeStats.getLevel(player) + 1)) {
-            lore.add("§a- Abbaurate: §b" + pickaxeStats.getAbbaurate(player) + " §a➜ §b" +
-                    (pickaxeStats.getAbbaurate(player) + 1));
-        }
-//        } else {
-//            lore.add("§a- Abbaurate: §b" + pickaxeStats.getAbbaurate(player));
-//        }
+        // Abbaurate bei jedem Level
+        lore.add("§a- Abbaurate: §b" + pickaxeStats.getAbbaurate(player) + " §a➜ §b" +
+                (pickaxeStats.getAbbaurate(player) + 1));
 
-        // Add efficiency upgrade info
-        String nextLevel = String.valueOf(pickaxeStats.getLevel(player) + 1);
-        if (nextLevel.endsWith("5") && pickaxeStats.getEfficiency(player) != 150) {
+        // Effizienz alle 2 Level
+        if ((pickaxeStats.getLevel(player) + 1) % 2 == 0 && pickaxeStats.getEfficiency(player) != 150) {
             lore.add("§a- Effizienz: §b" + pickaxeStats.getEfficiency(player) + " §a➜ §b" +
                     (pickaxeStats.getEfficiency(player) + 1));
         }
-//        } else {
-//            lore.add("§a- Effizienz: §b" + pickaxeStats.getEfficiency(player));
-//        }
 
-        // Add speed upgrade info
+        // Speed alle 10 Level
+        String nextLevel = String.valueOf(pickaxeStats.getLevel(player) + 1);
         if (nextLevel.endsWith("0") && pickaxeStats.getSpeed(player) != 5) {
             lore.add("§a- Geschwindigkeit: §b" + pickaxeStats.getSpeed(player) + " §a➜ §b" +
                     (pickaxeStats.getSpeed(player) + 1));
         }
-//        } else {
-//            lore.add("§a- Geschwindigkeit: §b" + pickaxeStats.getSpeed(player));
-//        }
 
-        if (Integer.parseInt(nextLevel) == 100) {
-            if (pickaxeStats.getPrestigeLevel(player) +1 % 4 == 0 && pickaxeStats.getBlockabbau(player) != 50) {
-                lore.add("§a- Blockabbau: §b" + pickaxeStats.getBlockabbau(player) + " §a➜ §b" +
-                        (pickaxeStats.getBlockabbau(player) + 1));
-            }
+        // Blockabbau bei jedem 4. Prestige
+        if (pickaxeStats.getPrestigeLevel(player) % 4 == 0 && pickaxeStats.getBlockabbau(player) != 50 && pickaxeStats.getLevel(player) == 0) {
+            lore.add("§a- Blockabbau: §b" + pickaxeStats.getBlockabbau(player) + " §a➜ §b" +
+                    (pickaxeStats.getBlockabbau(player) + 1));
         }
-
     }
 
     private void addMaterialCosts(Player player, List<String> lore) {
@@ -502,5 +501,71 @@ public class Events implements Listener {
             }
             lore.add(costLine);
         }
+    }
+
+    private void handleJackhammer(BlockBreakEvent event) {
+        Player player = event.getPlayer();
+        Block block = event.getBlock();
+
+        // 15% Chance auf Jackhammer
+        if (Math.random() < 0.15) {
+            // Bestimme die Blickrichtung und Position
+            Location loc = block.getLocation();
+            float yaw = player.getLocation().getYaw();
+            float pitch = player.getLocation().getPitch();
+
+            // Liste für Blöcke zum Abbauen
+            List<Block> blocksToBreak = new ArrayList<>();
+            int maxDistance = 200; // Maximale Länge der Reihe
+
+            // Bestimme Richtung basierend auf Spieler-Rotation
+            if (pitch > 45 || pitch < -45) {
+                // Spieler schaut nach oben/unten - horizontale Linie in Blickrichtung
+                int[] direction = getHorizontalDirection(yaw);
+                for (int i = 1; i <= maxDistance; i++) {
+                    Block relativeBlock = loc.clone().add(direction[0] * i, 0, direction[1] * i).getBlock();
+                    if (isValidOre(relativeBlock)) {
+                        blocksToBreak.add(relativeBlock);
+                    } else {
+                        break; // Stoppe bei nicht-Erz Blöcken
+                    }
+                }
+            } else {
+                // Spieler schaut geradeaus - vertikale Linie
+                for (int i = 1; i <= maxDistance; i++) {
+                    Block relativeBlock = loc.clone().add(0, i, 0).getBlock();
+                    if (isValidOre(relativeBlock)) {
+                        blocksToBreak.add(relativeBlock);
+                    } else {
+                        break;
+                    }
+                }
+            }
+
+            // Breche alle Blöcke in der Reihe
+            if (!blocksToBreak.isEmpty()) {
+                player.sendMessage("§a✦ Jackhammer ausgelöst!");
+                for (Block targetBlock : blocksToBreak) {
+                    targetBlock.setType(Material.AIR);
+                    updatePlayerStats(player, targetBlock, 1);
+                }
+            }
+        }
+    }
+
+    private int[] getHorizontalDirection(float yaw) {
+        // Normalisiere Yaw zu 0-360
+        while (yaw < 0) yaw += 360;
+        while (yaw > 360) yaw -= 360;
+
+        // Bestimme Hauptrichtung (N,O,S,W)
+        if (yaw >= 315 || yaw < 45) return new int[]{0, 1};  // Norden (Z+)
+        if (yaw >= 45 && yaw < 135) return new int[]{-1, 0}; // Osten (X-)
+        if (yaw >= 135 && yaw < 225) return new int[]{0, -1}; // Süden (Z-)
+        return new int[]{1, 0}; // Westen (X+)
+    }
+
+    private boolean isValidOre(Block block) {
+        return Arrays.asList(materialList).contains(block.getType());
     }
 }

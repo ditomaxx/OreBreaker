@@ -121,11 +121,12 @@ public class ExchangeCommand implements CommandExecutor, TabCompleter {
         String selectedName = material + "_LEVEL_" + selectedLevel;
         String targetedName = material + "_LEVEL_" + targetedLevel;
 
+        // Ändere die Logik hier - verwende immer _LEVEL_ Format
         if (selectedLevel == 0) {
-            selectedName = material.toUpperCase();
+            selectedName = material + "_LEVEL_0";
         }
         if (targetedLevel == 0) {
-            targetedName = material.toUpperCase();
+            targetedName = material + "_LEVEL_0";
         }
 
         int requiredAmount = calculateRequiredAmount(material, selectedLevel, targetedLevel);
@@ -140,12 +141,9 @@ public class ExchangeCommand implements CommandExecutor, TabCompleter {
         }
 
         int playerBalance = Main.getInstance().getConfig().getInt("balance." + uuid + "." + selectedName, 0);
-
-        // Berechne die maximale Anzahl, die umgewandelt werden kann
         int maxExchangeAmount = playerBalance / topay;
 
         if (maxExchangeAmount > 0) {
-            // Führe die maximale Umwandlung durch
             int totalToPay = maxExchangeAmount * topay;
             int totalToGet = maxExchangeAmount * toget;
 

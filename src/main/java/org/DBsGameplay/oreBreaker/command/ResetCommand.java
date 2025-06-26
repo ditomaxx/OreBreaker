@@ -1,5 +1,6 @@
 package org.DBsGameplay.oreBreaker.command;
 
+import org.DBsGameplay.oreBreaker.Main;
 import org.DBsGameplay.oreBreaker.listeners.Events;
 import org.DBsGameplay.oreBreaker.utils.MinionStats;
 import org.DBsGameplay.oreBreaker.utils.MinionType;
@@ -39,6 +40,9 @@ public class ResetCommand implements CommandExecutor {
             minionStats.setMiningLevel(player, minionType, 1);
             minionStats.setUnlockedBlocks(player, minionType, 1);
         }
+
+        Main.getInstance().getConfig().set("balance." + player.getUniqueId(), null);
+        Main.getInstance().saveConfig();
 
         player.getInventory().clear();
         player.getInventory().addItem(events.getPickaxe(player));

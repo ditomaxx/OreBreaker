@@ -15,3 +15,6 @@ commands:
   setScoreboard:
     description: Setzt das Scoreboard
     usage: /setScoreboard [blocks/prestige]
+  reset:
+    description: Resettet den spieler
+    usage: /reset

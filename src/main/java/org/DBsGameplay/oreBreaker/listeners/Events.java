@@ -271,7 +271,7 @@ public class Events implements Listener {
         player.getInventory().addItem(getPickaxe(player));
     }
 
-    private ItemStack getPickaxe(Player player) {
+    public ItemStack getPickaxe(Player player) {
         ItemStack pickaxe = new ItemStack(Material.NETHERITE_PICKAXE);
         ItemMeta meta = pickaxe.getItemMeta();
 

@@ -38,6 +38,7 @@ public final class Main extends JavaPlugin {
 
         getCommand("umtausch").setTabCompleter(new ExchangeCommand());
         getCommand("setScoreboard").setExecutor(new SetScoreboardCommand());
+        getCommand("reset").setExecutor(new ResetCommand());
 
         var lamps = BukkitLamp.builder(this).build();
         lamps.register(new SetMinionCommand());

@@ -80,7 +80,7 @@ public class Events implements Listener {
     private void updateBreakSpeed(Player player) {
         int efficiencyLevel = pickaxeStats.getEfficiency(player);
         double newSpeed = efficiencyLevel == 0 ? BASE_BREAK_SPEED :
-                Math.min(BASE_BREAK_SPEED + (pickaxeStats.getSpeed(player) * 0.5), MAX_BREAK_SPEED);
+                Math.min(BASE_BREAK_SPEED + (pickaxeStats.getEfficiency(player) * 0.5), MAX_BREAK_SPEED);
         player.getAttribute(Attribute.PLAYER_BLOCK_BREAK_SPEED).setBaseValue(newSpeed);
     }
 

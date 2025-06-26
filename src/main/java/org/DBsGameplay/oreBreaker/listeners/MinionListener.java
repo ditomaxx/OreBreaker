@@ -7,12 +7,15 @@ import org.DBsGameplay.oreBreaker.utils.MinionType;
 import org.DBsGameplay.oreBreaker.utils.MinionsManager;
 import org.DBsGameplay.oreBreaker.utils.PickaxeStats;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+
+import java.time.LocalDate;
 
 public class MinionListener implements Listener {
 
@@ -24,13 +27,16 @@ public class MinionListener implements Listener {
     @EventHandler
     public void onPlayerInteractEvent(PlayerInteractEvent event) {
         if (event.getClickedBlock() == null) return;
-        if (event.getClickedBlock().getType() == Material.CHEST && minionsManager.isMinion(event.getClickedBlock().getLocation())) {
+
+        Location blockLocation = event.getClickedBlock().getLocation().clone();
+
+        if (event.getClickedBlock().getType() == Material.CHEST && minionsManager.isMinion(blockLocation)) {
             Player player = event.getPlayer();
 
             event.setCancelled(true);
 
-            if (minionStats.isMinionUnlocked(player, minionsManager.getMinionType(event.getClickedBlock().getLocation()))) {
-                minionGUI.openMinionGUI(player, minionsManager.getMinionType(event.getClickedBlock().getLocation()));
+            if (minionStats.isMinionUnlocked(player, minionsManager.getMinionType(blockLocation))) {
+                minionGUI.openMinionGUI(player, minionsManager.getMinionType(blockLocation));
 
                 for (String key : Main.getInstance().getConfig().getConfigurationSection("minionstats." + player.getUniqueId()).getKeys(false)) {
                     MinionType type = MinionType.valueOf(key);
@@ -51,7 +57,7 @@ public class MinionListener implements Listener {
                     }
                 }
             }else {
-                minionGUI.openBuyMinionGUI(player, minionsManager.getMinionType(event.getClickedBlock().getLocation()));
+                minionGUI.openBuyMinionGUI(player, minionsManager.getMinionType(blockLocation));
             }
         }
     }

@@ -297,7 +297,7 @@ public class Events implements Listener {
         lore.add("§5§nEntchantments-Stat:");
         lore.add("§e- Abbaurate: §b" + pickaxeStats.getAbbaurate(player) + " §apro Block");
         lore.add("§d- Blockabbau §b" + pickaxeStats.getBlockabbau(player) + "/50 §aim Radius");
-        lore.add("§4- Blockabbau Effizienz: §b" + pickaxeStats.getSpeed(player) + "/150");
+        lore.add("§4- Blockabbau Effizienz: §b" + pickaxeStats.getEfficiency(player) + "/150");
         lore.add("§9- Geschwindigkeits Level: §b" + pickaxeStats.getSpeed(player) + "/5");
         lore.add("§a- Jackhammer eine Reihe auslöse");
         lore.add("§aChance §b0.01% §avon §b35% Maximal");

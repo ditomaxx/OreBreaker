@@ -2,6 +2,7 @@ package org.DBsGameplay.oreBreaker.command;
 
 import org.DBsGameplay.oreBreaker.utils.MinionType;
 import org.DBsGameplay.oreBreaker.utils.MinionsManager;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Player;
@@ -18,10 +19,11 @@ public class SetMinionCommand {
         if (!commandActor.isPlayer()) return;
 
         Player player = commandActor.asPlayer();
-        Location location = player.getLocation();
+        Location location = player.getLocation().clone();
 
         minionsManager.addMinion(minionType, location);
-        ArmorStand armorStand = location.getWorld().spawn(location.add(0, 1,0), ArmorStand.class, stand -> {
+        Location armorstandLocation = location.clone().add(0, 1,0);
+        ArmorStand armorStand = location.getWorld().spawn(armorstandLocation, ArmorStand.class, stand -> {
             stand.setVisible(false);              // Macht den ArmorStand unsichtbar
             stand.setGravity(false);             // Deaktiviert Schwerkraft
             stand.setBasePlate(false);           // Entfernt die Bodenplatte

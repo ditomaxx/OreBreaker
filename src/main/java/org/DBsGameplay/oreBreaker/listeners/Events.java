@@ -7,6 +7,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -18,6 +19,8 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.util.Vector;
+
 import java.util.*;
 
 public class Events implements Listener {
@@ -506,58 +509,55 @@ public class Events implements Listener {
     private void handleJackhammer(BlockBreakEvent event) {
         Player player = event.getPlayer();
         Block block = event.getBlock();
-    
-        // 15% Chance auf Jackhammer
-        if (Math.random() < 0.15) {
-    
-            Location loc = block.getLocation();
-    
-            // Blickrichtung des Spielers
-            Vector direction = player.getLocation().getDirection().normalize();
-    
-            List<Block> blocksToBreak = new ArrayList<>();
-            int maxDistance = 200;
-    
-            // Horizontal abbauen in Blickrichtung
-            for (int i = 1; i <= maxDistance; i++) {
-    
-                Location targetLoc = loc.clone().add(
-                        direction.getX() * i,
-                        0, // KEIN vertikales Abbauen mehr
-                        direction.getZ() * i
-                );
-    
-                Block relativeBlock = targetLoc.getBlock();
-    
-                if (isValidOre(relativeBlock)) {
-                    blocksToBreak.add(relativeBlock);
-                } else {
-                    break;
-                }
-            }
-    
-            // Blöcke abbauen
-            if (!blocksToBreak.isEmpty()) {
-                player.sendMessage("§a✦ Jackhammer ausgelöst!");
-    
-                for (Block targetBlock : blocksToBreak) {
-                    targetBlock.setType(Material.AIR);
-                    updatePlayerStats(player, targetBlock, 1);
-                }
+
+        if (Math.random() <= 0.15) return;
+
+        BlockFace direction = getHorizontalFace(player);
+        List<Block> blocksToBreak = new ArrayList<>();
+
+        // Beide Richtungen scannen
+        scanDirection(block, direction, blocksToBreak);
+        scanDirection(block, direction.getOppositeFace(), blocksToBreak);
+
+        if (!blocksToBreak.isEmpty()) {
+            player.sendMessage("§a✦ Jackhammer ausgelöst! §7(" + blocksToBreak.size() + " Blöcke)");
+            for (Block targetBlock : blocksToBreak) {
+                targetBlock.breakNaturally(player.getInventory().getItemInMainHand());
+                updatePlayerStats(player, targetBlock, 1);
             }
         }
     }
-    
-    private int[] getHorizontalDirection(float yaw) {
-        // Normalisiere Yaw zu 0-360
-        while (yaw < 0) yaw += 360;
-        while (yaw > 360) yaw -= 360;
 
-        // Bestimme Hauptrichtung (N,O,S,W)
-        if (yaw >= 315 || yaw < 45) return new int[]{0, 1};  // Norden (Z+)
-        if (yaw >= 45 && yaw < 135) return new int[]{-1, 0}; // Osten (X-)
-        if (yaw >= 135 && yaw < 225) return new int[]{0, -1}; // Süden (Z-)
-        return new int[]{1, 0}; // Westen (X+)
+    private void scanDirection(Block start, BlockFace face, List<Block> result) {
+        int maxDistance = 200;
+        Block current = start.getRelative(face);
+
+        for (int i = 0; i < maxDistance; i++) {
+            Material mat = current.getType();
+
+            // Air-Blöcke überspringen (normal, Cave-Air, Void-Air)
+            if (mat == Material.AIR || mat == Material.CAVE_AIR || mat == Material.VOID_AIR) {
+                current = current.getRelative(face);
+                continue;
+            }
+
+            if (isValidOre(current)) {
+                result.add(current);
+                current = current.getRelative(face);
+            } else {
+                // Solider Nicht-Erz-Block → stoppen
+                break;
+            }
+        }
+    }
+
+    private BlockFace getHorizontalFace(Player player) {
+        float yaw = ((player.getLocation().getYaw() % 360) + 360) % 360;
+
+        if (yaw >= 315 || yaw < 45)  return BlockFace.SOUTH;
+        if (yaw < 135)               return BlockFace.WEST;
+        if (yaw < 225)               return BlockFace.NORTH;
+        return                              BlockFace.EAST;
     }
 
     private boolean isValidOre(Block block) {

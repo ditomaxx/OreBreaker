@@ -506,45 +506,40 @@ public class Events implements Listener {
     private void handleJackhammer(BlockBreakEvent event) {
         Player player = event.getPlayer();
         Block block = event.getBlock();
-
+    
         // 15% Chance auf Jackhammer
         if (Math.random() < 0.15) {
-            // Bestimme die Blickrichtung und Position
+    
             Location loc = block.getLocation();
-            float yaw = player.getLocation().getYaw();
-            float pitch = player.getLocation().getPitch();
-
-            // Liste für Blöcke zum Abbauen
+    
+            // Blickrichtung des Spielers
+            Vector direction = player.getLocation().getDirection().normalize();
+    
             List<Block> blocksToBreak = new ArrayList<>();
-            int maxDistance = 200; // Maximale Länge der Reihe
-
-            // Bestimme Richtung basierend auf Spieler-Rotation
-            if (pitch > 45 || pitch < -45) {
-                // Spieler schaut nach oben/unten - horizontale Linie in Blickrichtung
-                int[] direction = getHorizontalDirection(yaw);
-                for (int i = 1; i <= maxDistance; i++) {
-                    Block relativeBlock = loc.clone().add(direction[0] * i, 0, direction[1] * i).getBlock();
-                    if (isValidOre(relativeBlock)) {
-                        blocksToBreak.add(relativeBlock);
-                    } else {
-                        break; // Stoppe bei nicht-Erz Blöcken
-                    }
-                }
-            } else {
-                // Spieler schaut geradeaus - vertikale Linie
-                for (int i = 1; i <= maxDistance; i++) {
-                    Block relativeBlock = loc.clone().add(0, i, 0).getBlock();
-                    if (isValidOre(relativeBlock)) {
-                        blocksToBreak.add(relativeBlock);
-                    } else {
-                        break;
-                    }
+            int maxDistance = 200;
+    
+            // Horizontal abbauen in Blickrichtung
+            for (int i = 1; i <= maxDistance; i++) {
+    
+                Location targetLoc = loc.clone().add(
+                        direction.getX() * i,
+                        0, // KEIN vertikales Abbauen mehr
+                        direction.getZ() * i
+                );
+    
+                Block relativeBlock = targetLoc.getBlock();
+    
+                if (isValidOre(relativeBlock)) {
+                    blocksToBreak.add(relativeBlock);
+                } else {
+                    break;
                 }
             }
-
-            // Breche alle Blöcke in der Reihe
+    
+            // Blöcke abbauen
             if (!blocksToBreak.isEmpty()) {
                 player.sendMessage("§a✦ Jackhammer ausgelöst!");
+    
                 for (Block targetBlock : blocksToBreak) {
                     targetBlock.setType(Material.AIR);
                     updatePlayerStats(player, targetBlock, 1);
@@ -552,7 +547,7 @@ public class Events implements Listener {
             }
         }
     }
-
+    
     private int[] getHorizontalDirection(float yaw) {
         // Normalisiere Yaw zu 0-360
         while (yaw < 0) yaw += 360;
